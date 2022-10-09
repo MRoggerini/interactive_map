@@ -3,7 +3,7 @@ import os
 from PIL import Image, ImageTk
 
 
-def map_explorer(root, map_name):
+def display_map(root, map_name):
     bg_image_path = os.path.join('data', 'maps', map_name)
     bg_image = Image.open(bg_image_path)
     root.bg = ImageTk.PhotoImage(bg_image)
@@ -19,3 +19,6 @@ if __name__ == '__main__':
     bg_image = 'Rexxentrun.jpg'
     map_explorer(main_window, bg_image)
     main_window.mainloop()
+
+    test = [a,b,c,d]
+    f'ciao a tutti {format_test} questo è il mio nome'
