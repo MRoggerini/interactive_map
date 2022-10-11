@@ -7,6 +7,7 @@ from PIL import Image, ImageTk
 
 class MapDisplayer:
     def __init__(self, root, map_name):
+        self.current_poly = None
         self.root = root
         self.map_image_path = os.path.join('data', 'maps', map_name)
         self.map_details = os.path.join('data', 'poi', re.sub(r'\..*', '.json', map_name))
@@ -18,10 +19,14 @@ class MapDisplayer:
 
         # create a canvas
         self.canvas = tk.Canvas(self.root, width=bg_width, height=bg_height)
-        self.canvas.pack()
+        self.canvas.grid(column=0, row=0)
 
         # add the image to the canvas
         self.canvas.create_image(0, 0, anchor='nw', image=self.bg)
+
+        # create the sidebar with the list of places
+        self.sidebar = tk.Frame(self.root)
+        self.sidebar.grid(column=1, row=0)
 
         # bind click event and hover event
         self.canvas.bind('<Button-1>', self.canvas_click_event)
@@ -31,14 +36,16 @@ class MapDisplayer:
         with open(self.map_details) as f:
             self.map_details = json.load(f)
 
-        # create a polygon for each area of interest
+        # create a polygon for each area of interest and add label in sidebar
         self.buildings = {}
+        self.sidebar_list = {}
 
-        for i in self.map_details:
-            print(i['coordinates'])
-            poly = self.canvas.create_polygon(i['coordinates'], fill='', activefill='red')
-            print(poly)
-            self.buildings[poly] = True
+        for i, value in enumerate(self.map_details):
+            poly = self.canvas.create_polygon(value['coordinates'], fill='', activefill='red')
+            label = tk.Label(self.sidebar, text=value['name'], anchor='n')
+            label.grid(column=0, row=i)
+            self.buildings[poly] = label
+            self.sidebar_list[label] = poly
 
 
     def canvas_click_event(self, event):
@@ -48,13 +55,21 @@ class MapDisplayer:
 
 
     def poly_enter_event(self, event, num=1):
+        # get the polygons under the cursor
         elem = self.canvas.find_overlapping(event.x, event.y, event.x+1, event.y+1)
+
+        # unset color if moved in another region
+        if self.current_poly and self.current_poly not in elem:
+            self.buildings[self.current_poly].configure(fg='black')
+
+        # color the polygon under the region
         for i in elem:
             try:
-                self.buildings[i]
+                self.buildings[i].configure(fg='red')
             except KeyError:
                 continue
-            print(f'sono nel poligono {i}')
+            self.current_poly = i
+            break
 
 if __name__ == '__main__':
     main_window = tk.Tk()
