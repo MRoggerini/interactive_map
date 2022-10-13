@@ -6,6 +6,46 @@ from PIL import Image, ImageTk
 
 
 class MapDisplayer:
+    """
+        workflow:
+            - spawn root container
+            - spawn a drop down menu (top-right)
+                - contains all maps from the image folder
+                - a new selection launches subroutine to populate map and
+                        closes the startup popup
+            - spawn a label for logging (bottom)
+            - spawn a button to spawn help window:
+                - a screenshot of the application with a short description of
+                        the elements
+            - prompt "to start select a map" -> pop-up window (?)
+                - contains the same drop-down menu of main window
+                - on selection the drop down menu of main window is set to the
+                        selected map and subroutine is launched
+            - on map selection, launch sub-routine to spawn canvas:
+                - create canvas (left)
+                - set the background to the selected map
+                - bind action commands to map hover and click
+                - create button to add a new item (bottom-right)
+                - bind action to start routine of new object to button:
+                    - remap button action to commit
+                    - change button label to "save POI"
+                    - on canvas click, log the click and save x,y to array
+                    - on click on commit, ask for polygon name and save to file.
+                                then, launch procedure to populate canvas.
+                                Finally, revert button to start
+                - create button to view current polygons and remove them (bottom-right)
+                - bind action to remove polygons:
+                    - change button to commit
+                    - change button label to "end"
+                    - change labels click action to delete:
+                        - on click, spawn popup asking for confirmation
+                    - on click on button, revert labels and button to original behaveour
+                - launch subrutine to populate the canvas:
+                    - load json file
+                        - if not found, log and stop
+                    - for each element in json create a polygon and a label (right)
+                    - bind action to label to highlight polygon
+    """
     def __init__(self, root, map_name):
         self.current_poly = None
         self.root = root
