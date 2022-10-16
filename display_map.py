@@ -2,8 +2,49 @@ import tkinter as tk
 import os
 import re
 import json
+from json.decoder import JSONDecodeError
 from datetime import datetime
 from PIL import Image, ImageTk
+
+
+class NamePoiPopup:
+    def __init__(self, root_tk, root_class):
+        self.root_tk = root_tk
+        self.root_class = root_class
+        self.spawn()
+
+    def spawn(self):
+        # spawn a new window asking for POI name
+        self.ask_name_popup = tk.Toplevel()
+        self.ask_name_popup.title('Dai un nome a questo POI')
+
+        self.ask_name_label = tk.Label(
+                self.ask_name_popup,
+                text='Dai un nome a questo POI:'
+            )
+        self.ask_name_label.grid(column=0, row=0)
+
+        self.ask_name_textbox = tk.Text(self.ask_name_popup)
+        self.ask_name_textbox.grid(column=0, row=1)
+
+        self.ask_name_button = tk.Button(
+                self.ask_name_popup,
+                text='Conferma',
+                command=self.ask_name_collect
+            )
+        self.ask_name_button.grid(column=0, row=2)
+
+
+    def ask_name_collect(self):
+        # collect the name from the textbox
+        poi_name = self.ask_name_textbox.get(1.0, 1000.0)
+        # destroy everything in the window
+        self.ask_name_button.destroy()
+        self.ask_name_textbox.destroy()
+        self.ask_name_label.destroy()
+        self.ask_name_popup.destroy()
+        # call parent routine to save POI
+        self.root_class.ask_name_collect(poi_name)
 
 
 class MapDisplayer:
@@ -14,6 +55,7 @@ class MapDisplayer:
         self.buildings = {}
         self.sidebar_list = {}
         self.image_id = None
+        self.saving_clicks = []
         self.ps1 = '$: '
 
         self.operative_pane = tk.Frame(self.root)
@@ -65,10 +107,79 @@ class MapDisplayer:
         self.buttons_frame = tk.Frame(self.sidebar)
         self.buttons_frame.grid(column=0, row=2)
 
+        # create button to add a new POI
+        self.button_add_poi = tk.Button(
+                self.buttons_frame,
+                text='Nuovo POI',
+                command=self.add_poi
+            )
+        self.button_add_poi.grid(column=0, row=0)
+
+        # create button to remove POI
+        self.button_delete_poi = tk.Button(self.buttons_frame, text='Rimuovi POI')
+        self.button_delete_poi.grid(column=0, row=1)
+
         self.setup_new_map(map_name)
 
 
     def drop_down_selector(self, event):
+        self.setup_new_map(self.variable.get())
+
+
+    def add_poi(self):
+        # change button text to 'Salva POI'
+        self.button_add_poi.configure(text='Salva POI')
+
+        # change button callback to save_poi
+        self.button_add_poi.configure(command=self.save_poi)
+
+        # change map click callback
+        self.canvas.bind('<Button-1>', self.canvas_click_save)
+
+        # clear currently clicked coordinates
+        self.saving_clicks = []
+
+
+    def canvas_click_save(self, event):
+        self.saving_clicks.append([event.x, event.y])
+
+
+    def save_poi(self):
+        # get the name of the POI
+        self.popup_poi = NamePoiPopup(self.root, self)
+
+
+    def ask_name_collect(self, poi_name):
+        # change button text to 'Nuovo POI'
+        self.button_add_poi.configure(text='Nuovo POI')
+
+        # change button callback to add_poi
+        self.button_add_poi.configure(command=self.add_poi)
+
+        # change map click callback
+        self.canvas.bind('<Button-1>', self.canvas_click_print)
+
+        # collect and remap clicked points
+        poi_coordinates = []
+        print(f'collected the following clicks: {self.saving_clicks}')
+        for w, h in self.saving_clicks:
+            w = (w - self.wpad) / self.resize_rate
+            h = (h - self.hpad) / self.resize_rate
+            poi_coordinates.append([w, h])
+
+        # save the new POI in dict
+        self.map_details.append(
+                {
+                    'name': poi_name,
+                    'coordinates': poi_coordinates
+                }
+            )
+
+        # save dict in file
+        with open(self.map_details_file, 'w') as f:
+            json.dump(self.map_details, f, indent=4)
+
+        # reload map
         self.setup_new_map(self.variable.get())
 
 
@@ -98,7 +209,7 @@ class MapDisplayer:
         self.image_id = self.canvas.create_image(0, 0, anchor='nw', image=self.bg)
 
         # bind click event and hover event
-        self.canvas.bind('<Button-1>', self.canvas_click_event)
+        self.canvas.bind('<Button-1>', self.canvas_click_print)
         self.canvas.bind('<Motion>', self.poly_enter_event)
 
 
@@ -132,13 +243,13 @@ class MapDisplayer:
 
 
     def setup_poi(self, map_name):
-        self.map_details = os.path.join('data', 'poi', f'{map_name}.json')
+        self.map_details_file = os.path.join('data', 'poi', f'{map_name}.json')
 
         # load details about the selected map
         try:
-            with open(self.map_details) as f:
+            with open(self.map_details_file) as f:
                 self.map_details = json.load(f)
-        except FileNotFoundError:
+        except (FileNotFoundError, JSONDecodeError):
             self.map_details = []
 
         # delete old labels
@@ -161,18 +272,17 @@ class MapDisplayer:
                 j[1] = int(j[1] * self.resize_rate + self.hpad)
 
             # create polygon and label
-            poly = self.canvas.create_polygon(curr_coordinates, fill='', activefill='red')
+            poly = self.canvas.create_polygon(curr_coordinates, fill='blue', activefill='red')
             label = tk.Label(self.places_list, text=value['name'], anchor='n')
             label.grid(column=0, row=i)
             self.buildings[poly] = label
             self.sidebar_list[label] = poly
 
 
-
-    def canvas_click_event(self, event):
+    def canvas_click_print(self, event):
         # aggiungere il click a una lista sulla root che poi viene usata per
         # creare nuovi punti di interesse da aggiungere alla mappa
-        print(f'Clicked canvas: {event.x}, {event.y}')
+        self.log(f'Clicked canvas: {event.x}, {event.y}')
 
 
     def poly_enter_event(self, event):
