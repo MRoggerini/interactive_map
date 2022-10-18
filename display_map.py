@@ -47,6 +47,27 @@ class NamePoiPopup:
         self.root_class.ask_name_collect(poi_name)
 
 
+class MapBuilder:
+    #--------------------------------------------------------------------------
+    # Main class to instanciate a map explorer.
+    # Launches all the subclasses of the GUI components and the controller
+    # to collate all the elements together
+    #--------------------------------------------------------------------------
+    def __init__(self, root, map_name):
+        self.root = root
+        self.map_name = map_name
+
+        self.controller = MapController(self)
+        self.canvas = MapCanvas(self)
+        self.sidebar = MapSidebar()
+
+
+class MapController:
+    def __init__():
+        pass
+
+
+
 class MapDisplayer:
     def __init__(self, root, map_name, canvas_w=1000, canvas_h=800):
         self.root = root
@@ -266,13 +287,15 @@ class MapDisplayer:
         # create a polygon for each area of interest and add label in sidebar
         for i, value in enumerate(self.map_details):
             # adapt the coordinates to the resized image
-            curr_coordinates = value['coordinates']
-            for j in curr_coordinates:
-                j[0] = int(j[0] * self.resize_rate + self.wpad)
-                j[1] = int(j[1] * self.resize_rate + self.hpad)
+            in_coordinates = value['coordinates']
+            curr_coordinates = []
+            for w, h in in_coordinates:
+                w = int(w * self.resize_rate + self.wpad)
+                h = int(h * self.resize_rate + self.hpad)
+                curr_coordinates.append([w, h])
 
             # create polygon and label
-            poly = self.canvas.create_polygon(curr_coordinates, fill='blue', activefill='red')
+            poly = self.canvas.create_polygon(curr_coordinates, fill='', activefill='red')
             label = tk.Label(self.places_list, text=value['name'], anchor='n')
             label.grid(column=0, row=i)
             self.buildings[poly] = label
@@ -305,6 +328,7 @@ class MapDisplayer:
                 continue
             self.current_poly = i
             break
+
 
 if __name__ == '__main__':
     bg_image = 'Rexxentrun'
