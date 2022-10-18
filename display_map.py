@@ -48,7 +48,7 @@ class NamePoiPopup:
 
 
 class MapDisplayer:
-    def __init__(self, root, map_name, canvas_w=1500, canvas_h=900):
+    def __init__(self, root, map_name, canvas_w=1000, canvas_h=800):
         self.root = root
         self.canvas_w = canvas_w
         self.canvas_h = canvas_h
